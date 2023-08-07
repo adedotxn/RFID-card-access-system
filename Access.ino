@@ -59,13 +59,12 @@ void loop() {
 
 if (memcmp(mfrc522.uid.uidByte, accessUID, sizeof(accessUID)) == 0) {
 		Serial.println("Access Granted");
-        digitalWrite(RED_LED_PIN, LOW);     // Turn on red LED
+    digitalWrite(RED_LED_PIN, LOW);     // Turn on red LED
     digitalWrite(GREEN_LED_PIN, HIGH);   // Turn on green LED
     buzz(BUZZER_PIN, 100, 500);          // Buzz the buzzer for 100ms (short duration)
 	} else {
 		Serial.println("Access Denied");
-            digitalWrite(RED_LED_PIN, HIGH);     // Turn on red LED
-
+    digitalWrite(RED_LED_PIN, HIGH);     // Turn on red LED
     digitalWrite(GREEN_LED_PIN, LOW);   // Turn off green LED
     buzz(BUZZER_PIN, 1000, 1000);        // Buzz the buzzer for 1000ms (long duration)
 	}
