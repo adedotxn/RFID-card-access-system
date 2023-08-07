@@ -1,26 +1,6 @@
 /*
- * --------------------------------------------------------------------------------------------------------------------
- * Example sketch/program showing how to read data from a PICC to serial.
- * --------------------------------------------------------------------------------------------------------------------
- * This is a MFRC522 library example; for further details and other examples see: https://github.com/miguelbalboa/rfid
- * 
- * Example sketch/program showing how to read data from a PICC (that is: a RFID Tag or Card) using a MFRC522 based RFID
- * Reader on the Arduino SPI interface.
- * 
- * When the Arduino and the MFRC522 module are connected (see the pin layout below), load this sketch into Arduino IDE
- * then verify/compile and upload it. To see the output: use Tools, Serial Monitor of the IDE (hit Ctrl+Shft+M). When
- * you present a PICC (that is: a RFID Tag or Card) at reading distance of the MFRC522 Reader/PCD, the serial output
- * will show the ID/UID, type and any data blocks it can read. Note: you may see "Timeout in communication" messages
- * when removing the PICC from reading distance too early.
- * 
- * If your reader supports it, this sketch/program will read all the PICCs presented (that is: multiple tag reading).
- * So if you stack two or more PICCs on top of each other and present them to the reader, it will first output all
- * details of the first and then the next PICC. Note that this may take some time as all data blocks are dumped, so
- * keep the PICCs at reading distance until complete.
- * 
- * @license Released into the public domain.
- * 
- * Typical pin layout used:
+ 
+ * Pin layout used:
  * -----------------------------------------------------------------------------------------
  *             MFRC522      Arduino       Arduino   Arduino    Arduino          Arduino
  *             Reader/PCD   Uno/101       Mega      Nano v3    Leonardo/Micro   Pro Micro
@@ -77,14 +57,6 @@ void loop() {
 	// mfrc522.PICC_DumpToSerial(&(mfrc522.uid));
 
 
-  	// mfrc522.PICC_DumpToSerial(&(mfrc522.uid.uidByte));
-    	// Dump debug info about the card; PICC_HaltA() is automatically called
-    // if(mfrc522.uid.uidByte[0] == accessUID[0] && mfrc522.uid.uidByte[1] == accessUID[1] && mfrc522.uid.uidByte[2] == accessUID[2] && mfrc522.uid.uidByte[3] == accessUID[3]) {
-    //   Serial.println("Access Granted");
-    // } else {
-    //   Serial.println("Access Denied");
-    // }
-    // mfrc522.PICC_HaltA();
 if (memcmp(mfrc522.uid.uidByte, accessUID, sizeof(accessUID)) == 0) {
 		Serial.println("Access Granted");
         digitalWrite(RED_LED_PIN, LOW);     // Turn on red LED
