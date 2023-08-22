@@ -25,8 +25,17 @@
 #define RED_LED_PIN     2          // Pin for the red LED
 
 MFRC522 mfrc522(SS_PIN, RST_PIN);  // Create MFRC522 instance
-// byte accessUID[4] = {06, 11, A1, 01};
-byte accessUID[] = {0x0C, 0x93, 0xB9, 0x70};
+// byte accessUID[] = {0x0C, 0x93, 0xB9, 0x70};
+
+const byte MAX_TAGS = 10;
+const byte TAG_UID_LENGTH = 4;
+
+struct StoredTag {
+  byte uid[TAG_UID_LENGTH];
+};
+
+StoredTag storedTags[MAX_TAGS];
+byte storedTagCount = 0;
 
 void setup() {
 	Serial.begin(9600);		// Initialize serial communications with the PC
@@ -35,7 +44,8 @@ void setup() {
 	mfrc522.PCD_Init();		// Init MFRC522
 	delay(4);				// Optional delay. Some board do need more time after init to be ready, see Readme
 	mfrc522.PCD_DumpVersionToSerial();	// Show details of PCD - MFRC522 Card Reader details
-	Serial.println(F("Scan PICC to see UID, SAK, type, and data blocks..."));
+	Serial.println("RFID-RC522 Initialized");
+  Serial.println(F("Scan PICC to see UID, SAK, type, and data blocks..."));
 
   pinMode(BUZZER_PIN, OUTPUT); 
   pinMode(GREEN_LED_PIN, OUTPUT);    // Set green LED pin as output
@@ -56,21 +66,86 @@ void loop() {
 	// Dump debug info about the card; PICC_HaltA() is automatically called
 	// mfrc522.PICC_DumpToSerial(&(mfrc522.uid));
 
+  byte currentTagUID[TAG_UID_LENGTH];
+  Serial.print("Reading Tag UID -> ");
+  for(byte i = 0; i < mfrc522.uid.size; i++) {
+    currentTagUID[i] = mfrc522.uid.uidByte[i];
+    Serial.print(mfrc522.uid.uidByte[i], HEX);
+    Serial.print(" ");
+  };
+  Serial.println();
+  Serial.println("Done reading Tag UID");
 
-if (memcmp(mfrc522.uid.uidByte, accessUID, sizeof(accessUID)) == 0) {
-		Serial.println("Access Granted");
+  // storeTag(currentTagUID);
+  mfrc522.PICC_HaltA();
+  // deleteTag(currentTagUID);
+
+  if(checkAccessPermission(currentTagUID)) {
+    Serial.println("Access Granted");
     digitalWrite(RED_LED_PIN, LOW);     // Turn on red LED
     digitalWrite(GREEN_LED_PIN, HIGH);   // Turn on green LED
     buzz(BUZZER_PIN, 100, 500);          // Buzz the buzzer for 100ms (short duration)
-	} else {
-		Serial.println("Access Denied");
+  } else {
+    Serial.println("Access Denied");
     digitalWrite(RED_LED_PIN, HIGH);     // Turn on red LED
     digitalWrite(GREEN_LED_PIN, LOW);   // Turn off green LED
     buzz(BUZZER_PIN, 1000, 1000);        // Buzz the buzzer for 1000ms (long duration)
-	}
-
-	mfrc522.PICC_HaltA();
+  }
 }
+
+
+ bool checkAccessPermission(const byte* tagUID) {
+   for(byte i = 0; i < storedTagCount; i++) {
+     if(memcmp(tagUID, storedTags[i].uid, TAG_UID_LENGTH) == 0) {
+      return true;
+     }
+   }
+
+   return false;
+ }
+
+ void storeTag(const byte* tagUID) {
+    Serial.println("Storing UID in memory");
+    if(storedTagCount < MAX_TAGS) {
+      StoredTag newTag;
+
+      memcpy(newTag.uid, tagUID, TAG_UID_LENGTH);
+      storedTags[storedTagCount++] = newTag;
+      Serial.print("Tag stored successfully. UID: ");
+
+      for (byte i = 0; i < TAG_UID_LENGTH; i++) {
+        // Printing the current tag that's been saved to serial.
+        Serial.print(newTag.uid[i], HEX);
+        Serial.print(" ");
+      }
+      Serial.println();
+    } else {
+     Serial.println("Storage is full. Cannot store more tags");
+    }
+ }
+
+ void deleteTag(const byte* tagUID) {
+   for (byte i = 0; i < TAG_UID_LENGTH; i++) {
+      // Printing the current tag that's about to be deleted to serial.
+      Serial.print(tagUID[i], HEX);
+      Serial.print(" ");
+    }
+
+    for(byte i = 0; i < storedTagCount; i++) {
+      if(memcmp(tagUID, storedTags[i].uid, TAG_UID_LENGTH) == 0) {
+        for(byte j = 1; j < storedTagCount - 1; j++) {
+          //shift the remaining tags to fill the gap
+          storedTags[j] = storedTags[j + 1];
+        }
+        storedTagCount--;
+        Serial.print("-> Tag deleted successfully." );
+        Serial.println();
+        return;
+      }
+    }
+    Serial.println("Tag not found. Deletion failed");
+ }
+
 
 void buzz(int pin, long onTime, long offTime) {
   digitalWrite(pin, HIGH);
