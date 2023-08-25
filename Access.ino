@@ -188,7 +188,7 @@ void loop() {
     for (byte j = 0; j < TAG_UID_LENGTH; j++) {
       Serial.print(storedTags[i].uid[j], HEX);
       Serial.print(" ");
-    }v
+    }
     Serial.println();
   }
   Serial.println();
