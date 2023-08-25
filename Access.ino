@@ -15,18 +15,27 @@
  * More pin layouts for other boards can be found here: https://github.com/miguelbalboa/rfid#pin-layout
  */
 
+// Imports
 #include <SPI.h>
 #include <MFRC522.h>
 
+// Pins
 #define RST_PIN         9          // Configurable, see typical pin layout above
 #define SS_PIN          10         // Configurable, see typical pin layout above
 #define BUZZER_PIN      4          // Pin for the buzzer
 #define GREEN_LED_PIN   3          // Pin for the green LED
 #define RED_LED_PIN     2          // Pin for the red LED
 
-MFRC522 mfrc522(SS_PIN, RST_PIN);  // Create MFRC522 instance
-// byte accessUID[] = {0x0C, 0x93, 0xB9, 0x70};
+// Commands
+#define STORE         's'
+#define DELETE        'd'
+#define VERIFY        'v'
+#define LISTALLTAGS   'l'
 
+// MFRC522 Instance
+MFRC522 mfrc522(SS_PIN, RST_PIN); 
+
+// Constants
 const byte MAX_TAGS = 10;
 const byte TAG_UID_LENGTH = 4;
 
@@ -34,16 +43,17 @@ struct StoredTag {
   byte uid[TAG_UID_LENGTH];
 };
 
+// Variables
 StoredTag storedTags[MAX_TAGS];
 byte storedTagCount = 0;
 
 void setup() {
-	Serial.begin(9600);		// Initialize serial communications with the PC
-	while (!Serial);		// Do nothing if no serial port is opened (added for Arduinos based on ATMEGA32U4)
-	SPI.begin();			// Init SPI bus
-	mfrc522.PCD_Init();		// Init MFRC522
-	delay(4);				// Optional delay. Some board do need more time after init to be ready, see Readme
-	mfrc522.PCD_DumpVersionToSerial();	// Show details of PCD - MFRC522 Card Reader details
+  delay(2000);				                          // Optional 2s delay. Some board do need more time after init to be ready
+	Serial.begin(9600);		                        // Initialize serial communications with the PC
+	while (!Serial);		                          // Do nothing if no serial port is opened (added for Arduinos based on ATMEGA32U4)
+	SPI.begin();			                            // Init SPI bus
+	mfrc522.PCD_Init();		                        // Init MFRC522
+	mfrc522.PCD_DumpVersionToSerial();	          // Show details of PCD - MFRC522 Card Reader details
 	Serial.println("RFID-RC522 Initialized");
   Serial.println(F("Scan PICC to see UID, SAK, type, and data blocks..."));
 
@@ -76,20 +86,41 @@ void loop() {
   Serial.println();
   Serial.println("Done reading Tag UID");
 
-  // storeTag(currentTagUID);
   mfrc522.PICC_HaltA();
-  // deleteTag(currentTagUID);
 
-  if(checkAccessPermission(currentTagUID)) {
-    Serial.println("Access Granted");
-    digitalWrite(RED_LED_PIN, LOW);     // Turn on red LED
-    digitalWrite(GREEN_LED_PIN, HIGH);   // Turn on green LED
-    buzz(BUZZER_PIN, 100, 500);          // Buzz the buzzer for 100ms (short duration)
-  } else {
-    Serial.println("Access Denied");
-    digitalWrite(RED_LED_PIN, HIGH);     // Turn on red LED
-    digitalWrite(GREEN_LED_PIN, LOW);   // Turn off green LED
-    buzz(BUZZER_PIN, 1000, 1000);        // Buzz the buzzer for 1000ms (long duration)
+  Serial.println("Type in a command to perform an action");
+  Serial.println("s: Store a tag");
+  Serial.println("d: Delete a tag");
+  Serial.println("v: Verify a tag/Check tag's permission");
+  Serial.println("l: List all tags currently stored in memory");
+  Serial.println();
+
+  if (Serial.available() > 0) {
+    char command = Serial.read();
+    switch (command) {
+      case STORE:
+        storeTag(currentTagUID);
+        break;
+      case DELETE:
+        deleteTag(currentTagUID);
+        break;
+      case VERIFY:
+        if(checkAccessPermission(currentTagUID)) {
+          Serial.println("Access Granted");
+          digitalWrite(RED_LED_PIN, LOW);     // Turn on red LED
+          digitalWrite(GREEN_LED_PIN, HIGH);   // Turn on green LED
+          buzz(BUZZER_PIN, 100, 500);          // Buzz the buzzer for 100ms (short duration)
+        } else {
+          Serial.println("Access Denied");
+          digitalWrite(RED_LED_PIN, HIGH);     // Turn on red LED
+          digitalWrite(GREEN_LED_PIN, LOW);   // Turn off green LED
+          buzz(BUZZER_PIN, 1000, 1000);        // Buzz the buzzer for 1000ms (long duration)
+        }
+        break;
+      case LISTALLTAGS:
+        listStoredTags();
+        break;
+    }
   }
 }
 
@@ -125,6 +156,8 @@ void loop() {
  }
 
  void deleteTag(const byte* tagUID) {
+    Serial.println("Deleting UID in memory");
+
    for (byte i = 0; i < TAG_UID_LENGTH; i++) {
       // Printing the current tag that's about to be deleted to serial.
       Serial.print(tagUID[i], HEX);
@@ -134,7 +167,7 @@ void loop() {
     for(byte i = 0; i < storedTagCount; i++) {
       if(memcmp(tagUID, storedTags[i].uid, TAG_UID_LENGTH) == 0) {
         for(byte j = 1; j < storedTagCount - 1; j++) {
-          //shift the remaining tags to fill the gap
+          //Shift the remaining tags to fill the gap
           storedTags[j] = storedTags[j + 1];
         }
         storedTagCount--;
@@ -145,6 +178,21 @@ void loop() {
     }
     Serial.println("Tag not found. Deletion failed");
  }
+
+ void listStoredTags() {
+  Serial.println("Stored Tags:");
+  for (byte i = 0; i < storedTagCount; i++) {
+    Serial.print("Tag ");
+    Serial.print(i + 1);
+    Serial.print(": ");
+    for (byte j = 0; j < TAG_UID_LENGTH; j++) {
+      Serial.print(storedTags[i].uid[j], HEX);
+      Serial.print(" ");
+    }v
+    Serial.println();
+  }
+  Serial.println();
+}
 
 
 void buzz(int pin, long onTime, long offTime) {
